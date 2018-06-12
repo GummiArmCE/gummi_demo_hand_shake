@@ -1,0 +1,5 @@
+<launch>
+  <!-- <include file="$(find gummi_interface)/launch/load_config.launch" ns="hmi">
+  </include> -->
+  <node name="hand_shake" pkg="gummi_demo_hand_shake" type="gummi_hand_shake.py" output="screen"/>
+</launch>
