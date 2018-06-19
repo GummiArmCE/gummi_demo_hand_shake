@@ -3,6 +3,6 @@
   </include> -->
   <node name="hand_shake" pkg="gummi_demo_hand_shake" type="gummi_hand_shake.py" output="screen">
     <remap from="~joint_commands" to="/gummi/joint_commands"/>
-    <remap from="/gummi/palm_touch" to="~touch"/>
+    <remap from="~touch" to="/gummi/palm_touch"/>
   </node>
 </launch>
