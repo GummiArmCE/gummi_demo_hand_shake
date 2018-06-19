@@ -120,7 +120,7 @@ def main(args):
     final = [0.3170226961630325, 0.45, 0.25, -0.2684466378799872, -0.3681553890925539, 0.3, 0.0]
 
     desired_pose = rest
-    cocontraction = [0.6, 0.6, 0.6, 1.0, 0.0, 1.0, 0.2]
+    cocontraction = [0.75, 0.6, 0.6, 1.0, 0.0, 1.0, 0.2]
 
     width = 0.4
     frequency = 3.0
@@ -141,12 +141,12 @@ def main(args):
         if do_shake_hand:
             if time_counter < 60:
                 print "Moving, first step"
-                cocontraction = [0.6, 0.6, 0.85, 1.0, 0.2, 1.0, 0.2]
+                cocontraction = [0.75, 0.6, 0.85, 1.0, 0.2, 1.0, 0.2]
                 desired_pose = mid
             else:
                 if time_counter < 250:
                     print "Moving, second step"
-                    cocontraction = [0.5, 0.4, 0.85, 1.0, 0.2, 1.0, 0.2]
+                    cocontraction = [0.75, 0.4, 0.85, 1.0, 0.2, 1.0, 0.2]
                     desired_pose = final
                 else:
                     print "Waiting..."
@@ -171,7 +171,7 @@ def main(args):
                         else:
                             if time_counter < 1600:
                                 print "Go to rest"
-                                cocontraction = [0.6, 0.6, 0.6, 1.0, 0.2, 1.0, 0.2]
+                                cocontraction = [0.75, 0.6, 0.6, 1.0, 0.2, 1.0, 0.2]
                                 desired_pose = rest
                             else:
                                 print "Done with hand shake"
