@@ -123,7 +123,7 @@ def main(args):
     cocontraction = [0.75, 0.6, 0.6, 1.0, 0.0, 1.0, 0.2]
 
     width = 0.4
-    frequency = 3.0
+    frequency = 4.0
 
     rospy.init_node('gummi', anonymous=True)
     r = rospy.Rate(60)
