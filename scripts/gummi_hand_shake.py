@@ -15,7 +15,7 @@ class HandShake:
     def __init__(self):
         self.person_in_front = False
         self.hand_shake_done = False
-        self.touch_data_palm = 0
+        self.touch_data_palm = 10000
         self.person_counter = 0
         self.touch_counter = 0
 
