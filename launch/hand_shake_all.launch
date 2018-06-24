@@ -1,13 +1,9 @@
 <launch>
-  <include file="$(find gummi_base_mayo)/launch/manager.launch"/>
-  <include file="$(find gummi_base_mayo)/launch/controllers.launch"/>
-
   <include file="$(find freenect_launch)/launch/freenect.launch"/>
-  <include file="$(find gummi_hand_shake_demo)/launch/scan.launch"/>
+  <include file="$(find gummi_demo_hand_shake)/launch/scan.launch"/>
   <include file="$(find gummi_trigger)/launch/trigger.launch"/>
 
-  <node name="arduino_hand" pkg="rosserial_python" type="serial_node.py" output="screen" args="/dev/ttyUSB3"/>
+  <node name="arduino_hand" pkg="rosserial_python" type="serial_node.py" output="screen" args="/dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0"/>
 
-  <include file="$(find gummi_interface)/launch/hand_shake.launch">
-  </include>
+  <include file="$(find gummi_demo_hand_shake)/launch/hand_shake_node.launch"/>
 </launch>

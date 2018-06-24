@@ -7,6 +7,7 @@ import math
 
 from std_msgs.msg import Bool
 from std_msgs.msg import UInt16
+from std_msgs.msg import Float64
 from sensor_msgs.msg import JointState
 
 #from gummi_interface.gummi import Gummi
@@ -15,17 +16,15 @@ class HandShake:
     def __init__(self):
         self.person_in_front = False
         self.hand_shake_done = False
-        self.touch_data_palm = 10000
+        self.touch_data_palm = 0
         self.person_counter = 0
         self.touch_counter = 0
 
         rospy.Subscriber('~person', Bool, self.personCallback)
         rospy.Subscriber('~touch', UInt16, self.touchCallback)
 
-        self.pwm1_pub = rospy.Publisher("~pwm1", UInt16,  queue_size=10)
-        self.pwm2_pub = rospy.Publisher("~pwm2", UInt16,  queue_size=10)
-
         self.jointStatePub = rospy.Publisher("~joint_commands", JointState,  queue_size=10)
+        self.handClosePub = rospy.Publisher("~hand_close", Float64,  queue_size=10)
 
         # the JointState object is created here to save time later
         self.JoinStateMsg = JointState()
@@ -69,7 +68,7 @@ class HandShake:
             return False
 
     def haveTouch(self):
-        if self.touch_data_palm < 1000: #TODO
+        if self.touch_data_palm > 600: #TODO
             return True
         else:
             return False
@@ -89,20 +88,11 @@ class HandShake:
     def done(self):
         self.hand_shake_done = True
 
-    def closeHand(self):
+    def moveHand(self, value):
         print "Closing hand"
-        #self.closePwm1()
-        #self.closePwm2()
-
-    def closePwm1(self):
-        msg = UInt16()
-        msg.data = 10
-        self.pwm1_pub.publish(msg)
-
-    def closePwm2(self):
-        msg = UInt16()
-        msg.data = 10
-        self.pwm2_pub.publish(msg)
+        msg = Float64()
+        msg.data = value
+        self.handClosePub.publish(msg)
 
     def publishJointState(self, joint_angles, cocontractions):
         self.JoinStateMsg.header.stamp = rospy.Time.now()
@@ -116,14 +106,14 @@ def main(args):
 
     pi = 3.1416
     rest = [0.0, -0.35, 0.25, 0.0030679615757712823, -0.7465373167710121, 0, -0.0051132692929521375]
-    mid = [0.0, 0.05, 0.14317154020265985, -0.21475731030398976, -0.4755340442445488, 0, 0.0]
-    final = [0.3170226961630325, 0.45, 0.25, -0.2684466378799872, -0.3681553890925539, 0.3, 0.0]
+    mid = [0.0, 0.05, 0.25, -0.21475731030398976, -0.4755340442445488, 0, 0.0]
+    final = [0.3170226961630325, 0.55, 0.25, -0.2684466378799872, -0.3681553890925539, 0.3, 0.0]
 
     desired_pose = rest
     cocontraction = [0.75, 0.6, 0.6, 1.0, 0.0, 1.0, 0.2]
 
-    width = 0.4
-    frequency = 4.0
+    width = 0.6
+    frequency = 4.5
 
     rospy.init_node('gummi', anonymous=True)
     r = rospy.Rate(60)
@@ -141,13 +131,13 @@ def main(args):
         if do_shake_hand:
             if time_counter < 60:
                 print "Moving, first step"
-                cocontraction = [0.75, 0.6, 0.85, 1.0, 0.2, 1.0, 0.2]
-                desired_pose = mid
+                cocontraction = [0.75, 0.6, 0.8, 1.0, 0.2, 1.0, 0.5]
+                desired_pose = list(mid)
             else:
-                if time_counter < 250:
+                if time_counter < 120:
                     print "Moving, second step"
-                    cocontraction = [0.75, 0.4, 0.85, 1.0, 0.2, 1.0, 0.2]
-                    desired_pose = final
+                    cocontraction = [0.75, 0.4, 0.8, 1.0, 0.2, 1.0, 0.8]
+                    desired_pose = list(final)
                 else:
                     print "Waiting..."
 
@@ -155,29 +145,35 @@ def main(args):
                         if not hand_is_closed:
                             if hand_shake.havePersistentTouch():
                                 print "Closing hand"
-                                #gummi.handClose.servoTo(1.5) #TODO
-                                elbow_waiting = final[4] #elbow final
+                                #elbow_waiting = final[4] #elbow final
                                 hand_is_closed = True
                                 time_counter = 750
                         else:
                             print "Shaking hand"
-                            elbow = elbow_waiting + width/2 * math.sin(frequency * time_counter/60.0)
+                            hand_shake.moveHand(2.0)
+                            elbow = -0.36 + width/2 * math.sin(frequency * time_counter/60.0)
                             desired_pose[4] = elbow
                     else:
                         if time_counter < 1350:
                             print "Opening hand"
-                            # gummi.handClose.servoTo(-2.2) #TODO
+                            hand_shake.moveHand(-2.0)
                             hand_is_closed = False
                         else:
-                            if time_counter < 1600:
-                                print "Go to rest"
-                                cocontraction = [0.75, 0.6, 0.6, 1.0, 0.2, 1.0, 0.2]
-                                desired_pose = rest
+                            if time_counter < 1400:
+                                print "Go to mid"
+                                cocontraction = [0.75, 0.6, 0.8, 1.0, 0.2, 1.0, 0.8]
+                                desired_pose = list(mid)
+
                             else:
-                                print "Done with hand shake"
-                                hand_shake.done()
-                                do_shake_hand = False
-                                time_counter = 0
+                                if time_counter < 1450:
+                                    print "Go to rest"
+                                    cocontraction = [0.75, 0.6, 0.6, 1.0, 0.0, 1.0, 0.2]
+                                    desired_pose = list(rest)
+                                else:
+                                    print "Done with hand shake"
+                                    hand_shake.done()
+                                    do_shake_hand = False
+                                    time_counter = 0
 
             time_counter = time_counter + 1
 
