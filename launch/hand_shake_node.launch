@@ -1,8 +1,8 @@
 <launch>
-  <!-- <include file="$(find gummi_interface)/launch/load_config.launch" ns="hmi">
-  </include> -->
   <node name="hand_shake" pkg="gummi_demo_hand_shake" type="gummi_hand_shake.py" output="screen">
     <remap from="~joint_commands" to="/gummi/joint_commands"/>
     <remap from="~touch" to="/gummi/palm_touch"/>
+    <remap from="~person" to="/trigger_status"/>
+    <remap from="~hand_close" to="/hand_close_controller/command"/>
   </node>
 </launch>

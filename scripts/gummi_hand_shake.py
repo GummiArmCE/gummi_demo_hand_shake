@@ -7,9 +7,8 @@ import math
 
 from std_msgs.msg import Bool
 from std_msgs.msg import UInt16
+from std_msgs.msg import Float64
 from sensor_msgs.msg import JointState
-
-#from gummi_interface.gummi import Gummi
 
 class HandShake:
     def __init__(self):
@@ -26,6 +25,7 @@ class HandShake:
         self.pwm2_pub = rospy.Publisher("~pwm2", UInt16,  queue_size=10)
 
         self.jointStatePub = rospy.Publisher("~joint_commands", JointState,  queue_size=10)
+        self.handClosePub = rospy.Publisher("~hand_close", Float64,  queue_size=10)
 
         # the JointState object is created here to save time later
         self.JoinStateMsg = JointState()
@@ -45,9 +45,9 @@ class HandShake:
     def doUpdate(self):
         if self.person_in_front:
             if self.person_counter < 100:
-                self.person_counter = self.person_counter + 1
+                self.person_counter = self.person_counter + 3
         else:
-            self.person_counter = self.person_counter - 5
+            self.person_counter = self.person_counter - 6
         if self.person_counter < 0:
             self.hand_shake_done = False
             self.person_counter = 0
@@ -55,15 +55,15 @@ class HandShake:
 
         if self.haveTouch():
             if self.touch_counter < 100:
-                self.touch_counter = self.touch_counter + 5
+                self.touch_counter = self.touch_counter + 15
         else:
-            self.touch_counter = self.touch_counter - 15
+            self.touch_counter = self.touch_counter - 30
         if self.touch_counter < 0:
             self.touch_counter = 0
         print "Touch counter: " + str(self.touch_counter)
 
     def havePersistentPerson(self):
-        if self.person_counter == 100:
+        if self.person_counter >= 100:
             return True
         else:
             return False
@@ -75,7 +75,7 @@ class HandShake:
             return False
 
     def havePersistentTouch(self):
-        if self.touch_counter == 100:
+        if self.touch_counter >= 100:
             return True
         else:
             return False
@@ -89,8 +89,11 @@ class HandShake:
     def done(self):
         self.hand_shake_done = True
 
-    def closeHand(self):
+    def closeHand(self, value):
         print "Closing hand"
+        msg = Float64()
+        msg.data = value
+        self.handClosePub.publish(msg)
         #self.closePwm1()
         #self.closePwm2()
 
@@ -117,16 +120,16 @@ def main(args):
     pi = 3.1416
     rest = [0.0, -0.35, 0.25, 0.0030679615757712823, -0.7465373167710121, 0, -0.0051132692929521375]
     mid = [0.0, 0.05, 0.14317154020265985, -0.21475731030398976, -0.4755340442445488, 0, 0.0]
-    final = [0.3170226961630325, 0.45, 0.25, -0.2684466378799872, -0.3681553890925539, 0.3, 0.0]
+    final = [0.3170226961630325, 0.45, 0.25, -0.2684466378799872, -0.30, 0.3, 0.0]
 
     desired_pose = rest
     cocontraction = [0.75, 0.6, 0.6, 1.0, 0.0, 1.0, 0.2]
 
-    width = 0.4
+    width = 1.0 # 0.4
     frequency = 4.0
 
     rospy.init_node('gummi', anonymous=True)
-    r = rospy.Rate(60)
+    r = rospy.Rate(20)
 
     hand_shake = HandShake()
 
@@ -139,41 +142,45 @@ def main(args):
         hand_shake.doUpdate()
 
         if do_shake_hand:
-            if time_counter < 60:
+            if time_counter < 20:
                 print "Moving, first step"
-                cocontraction = [0.75, 0.6, 0.85, 1.0, 0.2, 1.0, 0.2]
+                cocontraction = [0.75, 0.6, 0.85, 1.0, 0.6, 1.0, 0.5]
                 desired_pose = mid
             else:
-                if time_counter < 250:
+                if time_counter < 125:
                     print "Moving, second step"
-                    cocontraction = [0.75, 0.4, 0.85, 1.0, 0.2, 1.0, 0.2]
+                    cocontraction = [0.75, 0.8, 0.85, 1.0, 0.85, 1.0, 0.7]
                     desired_pose = final
                 else:
                     print "Waiting..."
 
-                    if time_counter < 1150:
+                    if time_counter < 500:
                         if not hand_is_closed:
                             if hand_shake.havePersistentTouch():
                                 print "Closing hand"
-                                #gummi.handClose.servoTo(1.5) #TODO
+                                hand_shake.closeHand(2)
                                 elbow_waiting = final[4] #elbow final
                                 hand_is_closed = True
-                                time_counter = 750
+                                time_counter = 350
                         else:
                             print "Shaking hand"
-                            elbow = elbow_waiting + width/2 * math.sin(frequency * time_counter/60.0)
+                            elbow = elbow_waiting + width/2 * math.sin(frequency * time_counter/20.0)
                             desired_pose[4] = elbow
                     else:
-                        if time_counter < 1350:
+                        if time_counter < 550:
                             print "Opening hand"
-                            # gummi.handClose.servoTo(-2.2) #TODO
+                            hand_shake.closeHand(0)
                             hand_is_closed = False
                         else:
-                            if time_counter < 1600:
-                                print "Go to rest"
-                                cocontraction = [0.75, 0.6, 0.6, 1.0, 0.2, 1.0, 0.2]
-                                desired_pose = rest
+                            if time_counter < 580:
+                                print "Moving back, second step"
+                                cocontraction = [0.75, 0.6, 0.85, 1.0, 0.6, 1.0, 0.5]
+                                desired_pose = mid
                             else:
+                                if time_counter < 600:
+                                    print "Go to rest"
+                                    cocontraction = [0.75, 0.6, 0.6, 1.0, 0.2, 1.0, 0.2]
+                                    desired_pose = rest
                                 print "Done with hand shake"
                                 hand_shake.done()
                                 do_shake_hand = False
@@ -182,8 +189,6 @@ def main(args):
             time_counter = time_counter + 1
 
         else:
-           #print "Passive hold"
-           #gummi.passiveHold() #TODO
 
            if hand_shake.haveNewPerson():
                if hand_shake.havePersistentPerson():
