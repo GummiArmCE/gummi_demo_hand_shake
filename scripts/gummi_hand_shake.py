@@ -154,37 +154,47 @@ def main(args):
                 else:
                     print "Waiting..."
 
-                    if time_counter < 500:
-                        if not hand_is_closed:
-                            if hand_shake.havePersistentTouch():
-                                print "Closing hand"
-                                hand_shake.closeHand(2)
-                                elbow_waiting = final[4] #elbow final
-                                hand_is_closed = True
-                                time_counter = 350
-                        else:
-                            print "Shaking hand"
-                            elbow = elbow_waiting + width/2 * math.sin(frequency * time_counter/20.0)
-                            desired_pose[4] = elbow
+                    if not(hand_shake.havePersistentPerson()):
+                        print "Person left before handshaking, return to resting pose."
+                        cocontraction = [0.75, 0.6, 0.6, 1.0, 0.2, 1.0, 0.2]
+                        desired_pose = rest
+                        hand_shake.done()
+                        do_shake_hand = False
+                        time_counter = 0
+
                     else:
-                        if time_counter < 550:
-                            print "Opening hand"
-                            hand_shake.closeHand(0)
-                            hand_is_closed = False
-                        else:
-                            if time_counter < 580:
-                                print "Moving back, second step"
-                                cocontraction = [0.75, 0.6, 0.85, 1.0, 0.6, 1.0, 0.5]
-                                desired_pose = mid
+
+                        if time_counter < 500:
+                            if not hand_is_closed:
+                                if hand_shake.havePersistentTouch():
+                                    print "Closing hand"
+                                    hand_shake.closeHand(2)
+                                    elbow_waiting = final[4] #elbow final
+                                    hand_is_closed = True
+                                    time_counter = 350
                             else:
-                                if time_counter < 600:
-                                    print "Go to rest"
-                                    cocontraction = [0.75, 0.6, 0.6, 1.0, 0.2, 1.0, 0.2]
-                                    desired_pose = rest
-                                print "Done with hand shake"
-                                hand_shake.done()
-                                do_shake_hand = False
-                                time_counter = 0
+                                print "Shaking hand"
+                                elbow = elbow_waiting + width/2 * math.sin(frequency * time_counter/20.0)
+                                desired_pose[4] = elbow
+                        else:
+                            if time_counter < 550:
+                                print "Opening hand"
+                                hand_shake.closeHand(0)
+                                hand_is_closed = False
+                            else:
+                                if time_counter < 580:
+                                    print "Moving back, second step"
+                                    cocontraction = [0.75, 0.6, 0.85, 1.0, 0.6, 1.0, 0.5]
+                                    desired_pose = mid
+                                else:
+                                    if time_counter < 600:
+                                        print "Go to rest"
+                                        cocontraction = [0.75, 0.6, 0.6, 1.0, 0.2, 1.0, 0.2]
+                                        desired_pose = rest
+                                    print "Done with hand shake"
+                                    hand_shake.done()
+                                    do_shake_hand = False
+                                    time_counter = 0
 
             time_counter = time_counter + 1
 
