@@ -178,7 +178,7 @@ def main(args):
                                     time_counter = 525
                                 else:
                                     print "Shaking hand"
-                                    elbow = elbow_waiting + width/2 * math.sin(frequency * time_counter/20.0)
+                                    elbow = elbow_waiting + width/2 * math.cos(frequency * time_counter/20.0)
                                     desired_pose[4] = elbow
                         else:
                             if time_counter < 550:
