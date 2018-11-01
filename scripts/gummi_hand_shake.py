@@ -188,7 +188,7 @@ def main(args):
                             else:
                                 if time_counter < 580:
                                     print "Moving back, second step"
-                                    cocontraction = [0.75, 0.6, 0.85, 1.0, 0.6, 1.0, 0.5]
+                                    cocontraction = [0.75, 0.6, 0.85, 1.0, 0.85, 1.0, 0.5]
                                     desired_pose = mid[:]
                                 else:
                                     if time_counter < 600:
