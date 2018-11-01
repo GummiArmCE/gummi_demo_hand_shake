@@ -23,7 +23,7 @@ import numpy as np
 #The MIN and MAX distance values define the range
 #where the presence of the person is detected.
 DISTANCE_MIN = 0.35 #0.55 #in meters
-DISTANCE_MAX = 0.9 #1.1 #in meters
+DISTANCE_MAX = 1.2 #1.1 #in meters
 #The COLUMNS value is used to do an average of
 #the values around the centre of the laser array
 #The array contains 640 values, the centre (320)

@@ -14,7 +14,7 @@ class HandShake:
     def __init__(self):
         self.person_in_front = False
         self.hand_shake_done = False
-        self.touch_data_palm = 10000
+        self.touch_data_palm = 0
         self.person_counter = 0
         self.touch_counter = 0
 
@@ -54,10 +54,10 @@ class HandShake:
         print "Person counter: " + str(self.person_counter)
 
         if self.haveTouch():
-            if self.touch_counter < 100:
-                self.touch_counter = self.touch_counter + 15
+            if self.touch_counter < 200:
+                self.touch_counter = self.touch_counter + 20
         else:
-            self.touch_counter = self.touch_counter - 30
+            self.touch_counter = self.touch_counter - 12
         if self.touch_counter < 0:
             self.touch_counter = 0
         print "Touch counter: " + str(self.touch_counter)
@@ -69,7 +69,7 @@ class HandShake:
             return False
 
     def haveTouch(self):
-        if self.touch_data_palm < 1000: #TODO
+        if self.touch_data_palm > 200: #TODO
             return True
         else:
             return False
@@ -120,13 +120,13 @@ def main(args):
     pi = 3.1416
     rest = [0.0, -0.35, 0.25, 0.0030679615757712823, -0.7465373167710121, 0, -0.0051132692929521375]
     mid = [0.0, 0.05, 0.14317154020265985, -0.21475731030398976, -0.4755340442445488, 0, 0.0]
-    final = [0.3170226961630325, 0.45, 0.25, -0.2684466378799872, -0.30, 0.3, 0.0]
+    final = [0.3170226961630325, 0.30, 0.25, -0.2684466378799872, -0.30, 0.3, 0.0]
 
-    desired_pose = rest
+    desired_pose = rest[:]
     cocontraction = [0.75, 0.6, 0.6, 1.0, 0.0, 1.0, 0.2]
 
-    width = 1.0 # 0.4
-    frequency = 4.0
+    width = 0.9 # 0.4
+    frequency = 6.0
 
     rospy.init_node('gummi', anonymous=True)
     r = rospy.Rate(20)
@@ -145,19 +145,20 @@ def main(args):
             if time_counter < 20:
                 print "Moving, first step"
                 cocontraction = [0.75, 0.6, 0.85, 1.0, 0.6, 1.0, 0.5]
-                desired_pose = mid
+                desired_pose = mid[:]
+                hand_shake.closeHand(0)
             else:
-                if time_counter < 125:
+                if time_counter < 35:
                     print "Moving, second step"
                     cocontraction = [0.75, 0.8, 0.85, 1.0, 0.85, 1.0, 0.7]
-                    desired_pose = final
+                    desired_pose = final[:]
                 else:
                     print "Waiting..."
 
                     if not(hand_shake.havePersistentPerson()):
                         print "Person left before handshaking, return to resting pose."
                         cocontraction = [0.75, 0.6, 0.6, 1.0, 0.2, 1.0, 0.2]
-                        desired_pose = rest
+                        desired_pose = rest[:]
                         hand_shake.done()
                         do_shake_hand = False
                         time_counter = 0
@@ -173,9 +174,12 @@ def main(args):
                                     hand_is_closed = True
                                     time_counter = 350
                             else:
-                                print "Shaking hand"
-                                elbow = elbow_waiting + width/2 * math.sin(frequency * time_counter/20.0)
-                                desired_pose[4] = elbow
+                                if not(hand_shake.havePersistentTouch()):
+                                    time_counter = 525
+                                else:
+                                    print "Shaking hand"
+                                    elbow = elbow_waiting + width/2 * math.sin(frequency * time_counter/20.0)
+                                    desired_pose[4] = elbow
                         else:
                             if time_counter < 550:
                                 print "Opening hand"
@@ -185,12 +189,12 @@ def main(args):
                                 if time_counter < 580:
                                     print "Moving back, second step"
                                     cocontraction = [0.75, 0.6, 0.85, 1.0, 0.6, 1.0, 0.5]
-                                    desired_pose = mid
+                                    desired_pose = mid[:]
                                 else:
                                     if time_counter < 600:
                                         print "Go to rest"
                                         cocontraction = [0.75, 0.6, 0.6, 1.0, 0.2, 1.0, 0.2]
-                                        desired_pose = rest
+                                        desired_pose = rest[:]
                                     print "Done with hand shake"
                                     hand_shake.done()
                                     do_shake_hand = False
