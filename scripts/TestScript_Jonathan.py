@@ -12,14 +12,10 @@ from sensor_msgs.msg import JointState
 
 class HandShake:
     def __init__(self):
-        self.person_in_front = True
         self.hand_shake_done = False
         self.touch_data_palm = 0
-        self.person_counter = 0
         self.touch_counter = 0
-        self.time_counter = 1
 
-        rospy.Subscriber('~person', Bool, self.personCallback)
         rospy.Subscriber('~touch', UInt16, self.touchCallback)
 
         self.pwm1_pub = rospy.Publisher("~pwm1", UInt16,  queue_size=10)
@@ -35,26 +31,11 @@ class HandShake:
         self.JoinStateMsg.velocity = [None]*len(self.JoinStateMsg.name)
         self.JoinStateMsg.effort = [None]*len(self.JoinStateMsg.name)
 
-    def personCallback(self, msg):
-        self.person_in_front = msg.data
-        #print "Person: " + str(person_in_front)
-
     def touchCallback(self, msg):
         self.touch_data_palm = msg.data
         #print "Touch: " + str(touch_data_palm)
 
     def doUpdate(self):
-        if self.person_in_front:
-            if self.person_counter < 100:
-                self.person_counter = self.person_counter + 3
-        else:
-            self.person_counter = self.person_counter - 6
-        if self.person_counter < 0:
-            self.hand_shake_done = False
-            self.person_counter = 0
-            person_in_front = True
-        print "Person counter: " + str(self.person_counter)
-
         if self.haveTouch():
             if self.touch_counter < 200:
                 self.touch_counter = self.touch_counter + 20
@@ -64,17 +45,8 @@ class HandShake:
             self.touch_counter = 0
         print "Touch counter: " + str(self.touch_counter)
 
-        print "Time counter: " + str(self.time_counter)
-
-    def havePersistentPerson(self):
-        if self.person_counter >= 100:
-            person_in_front = False
-            return True
-        else:
-            return False
-
     def haveTouch(self):
-        if self.touch_data_palm > 200: #TODO
+        if self.touch_data_palm > 400: #TODO
             return True
         else:
             return False
@@ -84,12 +56,6 @@ class HandShake:
             return True
         else:
             return False
-
-    def haveNewPerson(self):
-        if self.hand_shake_done:
-            return False
-        else:
-            return True
 
     def done(self):
         self.hand_shake_done = True
@@ -140,84 +106,62 @@ def main(args):
 
     do_shake_hand = False
     hand_is_closed = False
+    time_counter = 1
 
     while not rospy.is_shutdown():
 
         hand_shake.doUpdate()
 
         if do_shake_hand:
-            if hand_shake.time_counter < 20:
+            if time_counter < 20:
                 print "Moving, first step"
                 cocontraction = [0.75, 0.6, 0.85, 1.0, 0.6, 1.0, 0.5]
                 desired_pose = mid[:]
                 hand_shake.closeHand(0)
             else:
-                if hand_shake.time_counter < 35:
+                if time_counter < 35:
                     print "Moving, second step"
                     cocontraction = [0.75, 0.8, 0.85, 1.0, 0.85, 1.0, 0.7]
                     desired_pose = final[:]
                 else:
                     print "Waiting..."
 
-                    if hand_shake.havePersistentTouch():
-
-                        # Close the hand if not already closed, when user holds hand.
-                        if not(hand_is_closed):
-                            print "Closing hand"
-                            hand_shake.closeHand(2)
-                            elbow_waiting = final[4] #elbow final
-                            hand_is_closed = True
-                            # hand_shake.time_counter = 350
-
-                        # Start shaking hand if hand is closed and user is still holding hand.
+                    if time_counter < 500:
+                        if not hand_is_closed:
+                            if hand_shake.havePersistentTouch():
+                                print "Closing hand"
+                                hand_shake.closeHand(2)
+                                elbow_waiting = final[4] #elbow final
+                                hand_is_closed = True
+                                time_counter = 350
                         else:
-                            print "Shaking hand"
-                            elbow = elbow_waiting + width/2 * math.cos(frequency * hand_shake.time_counter/20.0)
-                            desired_pose[4] = elbow
+                            if not(hand_shake.havePersistentTouch()):
+                                time_counter = 525
+                            else:
+                                print "Shaking hand"
+                                elbow = elbow_waiting + width/2 * math.cos(frequency * time_counter/20.0)
+                                desired_pose[4] = elbow
                     else:
-
-                        # User no longer holding hand, but hand is cloased, so open it again!
-                        if hand_is_closed:
+                        if time_counter < 550:
                             print "Opening hand"
                             hand_shake.closeHand(0)
                             hand_is_closed = False
-                            
-                        hand_shake.time_counter = 30
+                        else:
+                            if time_counter < 580:
+                                print "Moving back, second step"
+                                cocontraction = [0.75, 0.6, 0.85, 1.0, 0.85, 1.0, 0.5]
+                                desired_pose = mid[:]
+                            else:
+                                if time_counter < 600:
+                                    print "Go to rest"
+                                    cocontraction = [0.75, 0.6, 0.6, 1.0, 0.2, 1.0, 0.2]
+                                    desired_pose = rest[:]
+                                print "Done with hand shake"
+                                hand_shake.done()
+                                do_shake_hand = False
+                                time_counter = 0
 
-
-
-
-
-                        # only wnat to enter this if the user has let go of the hand, otherwise just wait with hand out ready for handshake.
-
-                        # else:
-                        #     if hand_shake.time_counter < 580:
-                        #         print "Moving back, second step"
-                        #         cocontraction = [0.75, 0.6, 0.85, 1.0, 0.85, 1.0, 0.5]
-                        #         desired_pose = mid[:]
-                        #
-                        #     else:
-                        #         if hand_shake.time_counter < 600:
-                        #             print "Go to rest"
-                        #             cocontraction = [0.75, 0.6, 0.6, 1.0, 0.2, 1.0, 0.2]
-                        #             desired_pose = rest[:]
-                        #         print "Done with hand shake"
-                        #         hand_shake.done()
-                        #         do_shake_hand = False
-                        #         hand_shake.time_counter = 0
-                        #
-                        #         while(hand_shake.time_counter < 100):
-                        #             hand_shake.time_counter += 1
-
-
-            hand_shake.time_counter = hand_shake.time_counter + 1
-
-        else:
-
-           if 1: # hand_shake.haveNewPerson():
-               if hand_shake.havePersistentPerson():
-                   do_shake_hand = True
-                   print "Do hand shake"
+            time_counter = time_counter + 1
 
         hand_shake.publishJointState(desired_pose, cocontraction)
         r.sleep()
